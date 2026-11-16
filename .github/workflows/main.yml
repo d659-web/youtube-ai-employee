@@ -58,52 +58,38 @@ jobs:
           # Connect to Gemini with 120-second timeout
           client = genai.Client(
               api_key=api_key,
-              http_options={"timeout": 120000}
+              http_options={"timeout": 300000}
           )
 
           prompt = """
-          You are a professional YouTube Shorts story writer.
+Create one original English YouTube Shorts story.
 
-          Create one original, engaging English YouTube Shorts script.
+Duration: 45-60 seconds.
+Narration: 100-120 words.
 
-          REQUIREMENTS:
-          - Duration: 45-60 seconds.
-          - Narration: approximately 105-125 words.
-          - Choose a fascinating, factual or funny story topic.
-          - Start with a powerful hook.
-          - Keep viewers curious.
-          - End with a surprising punchline or twist.
-          - Do not invent facts and present them as true.
+Choose an interesting topic.
+Start with a powerful hook.
+Keep viewers curious.
+End with a surprising twist.
 
-          VISUAL STYLE:
-          Alternate between these two styles:
-          1. Tall Tale 3D: 2D cartoon characters inside a 3D world.
-          2. Stick Story: expressive black stick characters,
-             flat rooms, gold highlights and simple props.
+Visual style: Choose one:
+1. Stick Story: expressive black stick characters,
+flat rooms, gold highlights.
+2. Tall Tale 3D: cartoon people in colorful
+3D-looking worlds.
 
-          OUTPUT FORMAT:
+Return:
+TITLE:
+TOPIC:
+STYLE:
+NARRATION:
+SCENES:
+Give 8-10 scenes with visual directions.
+CAPTIONS:
+SOUND EFFECTS:
 
-          TITLE:
-          TOPIC:
-          SELECTED VISUAL STYLE:
-
-          SCRIPT:
-          A numbered table with:
-          Number | Narration | Caption
-
-          SCENE DIRECTIONS:
-          S1, S2, S3...
-          Include character expressions, background,
-          camera movement, props and animation.
-
-          CAPTIONS:
-          Short, readable English captions.
-
-          SOUND:
-          Suggest suitable sound effects.
-
-          Make the script production-ready.
-          """
+Make it original and production-ready.
+"""
 
           print("Sending request to Gemini AI...")
 
