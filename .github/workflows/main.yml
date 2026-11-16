@@ -1,0 +1,19 @@
+
+name: YouTube AI Agent
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-cloud:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Start Cloud Computer
+        run: echo "My YouTube AI Agent is running!"
+
+      - name: Check Python
+        run: python --version
+
+      - name: Check FFmpeg
+        run: ffmpeg -version
