@@ -3,22 +3,112 @@ name: YouTube AI Agent
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "30 3 * * *"
+
+permissions:
+  contents: read
 
 jobs:
-  test-cloud:
+  generate-script:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Start Cloud Computer
-        run: echo "My YouTube AI Agent is running!"
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: Check Python
-        run: python --version
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
       - name: Install FFmpeg
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Check FFmpeg
-        run: ffmpeg -version
+      - name: Install Gemini SDK
+        run: pip install google-genai
+
+      - name: Generate Daily Story
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          mkdir -p output
+          python - <<'PY'
+          import os
+          from google import genai
+
+          client = genai.Client(
+              api_key=os.environ["GEMINI_API_KEY"]
+          )
+
+          prompt = """
+          You are a professional YouTube Shorts story writer.
+
+          Create one original, engaging English YouTube Shorts script.
+
+          REQUIREMENTS:
+          - Duration: 45-60 seconds.
+          - Narration: approximately 105-125 words.
+          - Choose a fascinating, factual or funny story topic.
+          - Start with a powerful hook.
+          - Keep viewers curious.
+          - End with a surprising punchline or twist.
+          - Do not invent facts and present them as true.
+
+          VISUAL STYLE:
+          Alternate between these two styles:
+          1. Tall Tale 3D: 2D cartoon characters inside a 3D world.
+          2. Stick Story: expressive black stick characters,
+             flat rooms, gold highlights and simple props.
+
+          OUTPUT FORMAT:
+
+          TITLE:
+          TOPIC:
+          SELECTED VISUAL STYLE:
+
+          SCRIPT:
+          A numbered table with:
+          Number | Narration | Caption
+
+          SCENE DIRECTIONS:
+          S1, S2, S3...
+          Include character expressions, background,
+          camera movement, props and animation.
+
+          CAPTIONS:
+          Short, readable English captions.
+
+          SOUND:
+          Suggest suitable sound effects.
+
+          Make the script production-ready.
+          """
+
+          result = client.interactions.create(
+              model="gemini-3.8-flash",
+              input=prompt,
+              store=False
+          )
+
+          script = result.output_text
+
+          if not script:
+              raise Exception("Gemini returned an empty script")
+
+          with open("output/script.txt", "w",
+                    encoding="utf-8") as f:
+              f.write(script)
+
+          print("SUCCESS: Daily script generated!")
+          print(script)
+          PY
+
+      - name: Save Generated Script
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-youtube-script
+          path: output/script.txt
+          if-no-files-found: error
