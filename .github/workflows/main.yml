@@ -12,35 +12,53 @@ permissions:
 jobs:
   generate-script:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
+      # 1. Download repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # 2. Install Python
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
+      # 3. Install FFmpeg
       - name: Install FFmpeg
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
+      # 4. Install Gemini SDK
       - name: Install Gemini SDK
-        run: pip install google-genai
+        run: |
+          python -m pip install --upgrade google-genai
 
+      # 5. Generate YouTube Shorts Story
       - name: Generate Daily Story
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           mkdir -p output
+
           python - <<'PY'
           import os
+          import sys
           from google import genai
 
+          print("Starting YouTube AI Agent...")
+
+          api_key = os.environ.get("GEMINI_API_KEY")
+
+          if not api_key:
+              raise ValueError("GEMINI_API_KEY secret is missing!")
+
+          # Connect to Gemini with 120-second timeout
           client = genai.Client(
-              api_key=os.environ["GEMINI_API_KEY"]
+              api_key=api_key,
+              http_options={"timeout": 120000}
           )
 
           prompt = """
@@ -87,28 +105,46 @@ jobs:
           Make the script production-ready.
           """
 
-          result = client.interactions.create(
-              model="gemini-3.8-flash",
-              input=prompt,
-              store=False
-          )
+          print("Sending request to Gemini AI...")
 
-          script = result.output_text
+          try:
+              result = client.interactions.create(
+                  model="gemini-3.8-flash",
+                  input=prompt,
+                  store=False
+              )
 
-          if not script:
-              raise Exception("Gemini returned an empty script")
+              script = result.output_text
 
-          with open("output/script.txt", "w",
-                    encoding="utf-8") as f:
-              f.write(script)
+              if not script:
+                  raise Exception("Gemini returned an empty script!")
 
-          print("SUCCESS: Daily script generated!")
-          print(script)
+              os.makedirs("output", exist_ok=True)
+
+              with open(
+                  "output/script.txt",
+                  "w",
+                  encoding="utf-8"
+              ) as f:
+                  f.write(script)
+
+              print("SUCCESS: Daily story generated!")
+              print(script)
+
+          except Exception as e:
+              print(f"ERROR: Gemini generation failed: {e}")
+              sys.exit(1)
+
+          finally:
+              client.close()
           PY
 
+      # 6. Save Generated Script
       - name: Save Generated Script
         uses: actions/upload-artifact@v4
         with:
           name: daily-youtube-script
           path: output/script.txt
           if-no-files-found: error
+          retention-days: 7
+
